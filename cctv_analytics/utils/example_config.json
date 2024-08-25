@@ -1,0 +1,86 @@
+{
+    "cameras": [
+      {
+        "name": "Camera 1",
+        "places": [
+          {
+            "name": "Entrance",
+            "polygon": [[0, 0], [50, 0], [50, 50], [0, 50]]
+          },
+          {
+            "name": "Counter",
+            "polygon": [[100, 0], [150, 0], [150, 50], [100, 50]]
+          }
+        ]
+      },
+      {
+        "name": "Camera 2",
+        "places": [
+          {
+            "name": "Lobby",
+            "polygon": [[0, 0], [100, 0], [100, 100], [0, 100]]
+          }
+        ]
+      }
+    ],
+    "deepface": {
+      "detector_name": "retinaface",
+      "embedding_dim": 512,
+      "deepface_model_name": "Facenet512",
+      "url": "http://example.com/deepface"
+    },
+    "florence": {
+      "url": "https://example.com/florence"
+    },
+    "influxdb": {
+      "api_url": "localhost:8086",
+      "bucket": "my-bucket",
+      "org": "my-org",
+      "token": "my-token"
+    },
+    "kafka": {
+      "api_url": "localhost:9092",
+      "group_id": "my-group",
+      "topics": {
+        "audio": "audio",
+        "image": "image"
+      }
+    },
+    "milvus": {
+      "token": "my-token",
+      "uri": "http://localhost:19530"
+    },
+    "minio": {
+      "access_key": "your-access-key",
+      "bucket_name": "persons_img",
+      "bucket_voice": "voices_audio",
+      "host": "localhost",
+      "location": "us-east-1",
+      "secret_key": "your-secret-key"
+    },
+    "ollama": {
+      "agent_model": "llama3.1:8b",
+      "summarize_model": "llama3.1:8b",
+      "embedding_dim": 1024,
+      "embedding_model": "mxbai-embed-large:latest",
+      "host": "localhost:11434",
+      "response_language": "english"
+    },
+    "slack": {
+      "oauth_token": "your-oauth-token",
+      "app_token": "your-app-token",
+      "notify_url": "https://hooks.slack.com/services/<your_webhook>",
+      "channel": "<ID OF CHANNEL>"
+    },
+    "whispar": {
+      "api_key": "your-api-key",
+      "api_url": "https://example.com"
+    },
+    "xtts": {
+      "api_url": "http://localhost:5002/xtts"
+    },
+    "language": "english",
+    "location": "cctv-default"
+  }
+  
+  

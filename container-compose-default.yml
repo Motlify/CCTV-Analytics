@@ -1,0 +1,133 @@
+version: 1
+
+volumes:
+  milvus_etcd_data:
+  milvus_minio_data:
+  milvus_milvus_data:
+
+
+services:
+  # Deepface
+  deepface:
+    container_name: cctv_analytics_deepface
+    image: docker.io/serengil/deepface:latest
+    restart: always
+    ports:
+      - 5010:5000
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    devices:
+      - nvidia.com/gpu=0
+
+  # Florence
+  openedai_vision:
+    container_name: cctv_analytics_openedai_vision
+    image: TODO/ai_openedai-vision:latest
+    env_file: vision.env # your settings go here
+    volumes:
+      - hf_home:/app/hf_home  # for Hugginface model cache
+    command: python vision.py -m microsoft/Florence-2-large-ft --use-flash-attn --device-map cuda:0
+    ports:
+      - 5000:5006
+    devices:
+      - nvidia.com/gpu=0
+
+  # Milvus
+  milvus_etcd:
+    container_name: cctv_analytics_milvus-etcd
+    hostname: etcd
+    image: quay.io/coreos/etcd:v3.5.5
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - etcd_data:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  milvus_minio:
+    container_name: cctv_analytics_milvus-minio
+    hostname: minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - minio_data:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  milvus_standalone:
+    container_name: cctv_analytics_milvus-standalone
+    image: milvusdb/milvus:v2.4.6
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    volumes:
+      - milvus_conf:/milvus/configs
+      - milvus_data:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      - "etcd"
+      - "minio"
+
+  milvus_gui:
+    container_name: cctv_analytics_attu
+    image: docker.io/attu:latest
+    ports: 8000:3000
+    environment:
+      MILVUS_URL: "standalone:19530"
+
+  # Standalone time series db
+  influxdb:
+    container_name: cctv_analytics_influxdb
+    image: docker.io/influxdb:latest
+    restart: unless-stopped
+    ports:
+      - '8095:8086'
+    volumes:
+      - 'influxdb_data:/var/lib/influxdb2'
+
+  # Standalone objects server
+  minio:
+    image: docker.io/minio/minio:latest
+    container_name: cctv_analytics_minio
+    ports:
+      - '9005:9000'
+      - '9006:9001'
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=<minio_password>
+    volumes:
+      - data:/data
+    command: server /data --console-address :9001
+
+  cctv_analytics:
+    image: docker.io/tafeen/cctv_analytics:latest
+    container_name: cctv_analytics
+    volumes:
+      - config:/app/cctv_analytics/utils
